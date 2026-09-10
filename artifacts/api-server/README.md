@@ -85,32 +85,94 @@ curl -H "Authorization: Bearer TU_API_KEY" \
 
 El arranque de producción ya está configurado con Uvicorn, el puerto `8080` y el health check `/health`.
 
-## Render y VPS
+## Render
 
-Build:
+### Crear el servicio
+
+En Render crea un **New → Web Service**. No uses Static Site ni Background Worker: este proceso expone una API HTTP y necesita responder al health check.
+
+Configuración recomendada:
+
+| Campo de Render | Valor |
+|---|---|
+| Runtime | `Python 3` |
+| Root Directory | `artifacts/api-server` |
+| Build Command | `python -m pip install -r requirements.txt` |
+| Start Command | `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Health Check Path | `/health` |
+
+Si dejas vacío **Root Directory**, usa estos comandos desde la raíz del repositorio:
 
 ```bash
+# Build Command
 python -m pip install -r artifacts/api-server/requirements.txt
+
+# Start Command
+cd artifacts/api-server && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
-Start:
+No fijes `PORT` manualmente: Render lo proporciona automáticamente. El proceso debe escuchar en `0.0.0.0`.
 
-```bash
-cd artifacts/api-server && python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
-```
+### Variables de entorno
 
-Variables mínimas:
+En Render ve a **Environment → Environment Variables** y añade:
+
+Secretos:
 
 ```env
 API_KEY=una-clave-larga-y-aleatoria
-BLOXEN_DATABASE_URL=postgresql://usuario:password@host.neon.tech/bloxen?sslmode=require
+BLOXEN_DATABASE_URL=postgresql://usuario:password@host.neon.tech/bloxen?sslmode=require&channel_binding=require
+```
+
+Variables normales:
+
+```env
+ENVIRONMENT=production
 PRESENCE_INTERVAL=60
 CACHE_TTL=30
 CORS_ORIGINS=*
-ENVIRONMENT=production
+ROBLOX_TIMEOUT=8
+ROBLOX_RETRIES=2
+VERIFICATION_TTL=600
+VERIFICATION_MAX_ATTEMPTS=5
+RATE_LIMIT_MAX_REQUESTS=120
+RATE_LIMIT_WINDOW_SECONDS=60
 ```
 
-Las tablas se crean al iniciar. Para despliegues con migraciones formales, el esquema está centralizado en `app/database/models.py` y puede migrarse después con Alembic sin cambiar los contratos.
+`BLOXEN_DATABASE_URL` tiene prioridad sobre `DATABASE_URL`. No añadas `DATABASE_URL` si vas a usar Neon. Si usas el PostgreSQL de Render, puedes omitir `BLOXEN_DATABASE_URL` y configurar `DATABASE_URL` con la URL interna de Render.
+
+Rota la contraseña de Neon si la connection string anterior fue compartida en el chat. Las tablas se crean al iniciar cuando la conexión es válida.
+
+### Después del deploy
+
+Render asignará una URL como:
+
+```text
+https://bloxen-roblox-api.onrender.com
+```
+
+Comprueba:
+
+```bash
+curl https://TU-SERVICIO.onrender.com/health
+curl https://TU-SERVICIO.onrender.com/docs
+curl -H "Authorization: Bearer TU_API_KEY" \
+  https://TU-SERVICIO.onrender.com/api/v1/roblox/user/Builderman
+```
+
+`/health` debe devolver `"status": "ok"` y `"database": "ok"`. Si devuelve `"database": "unavailable"`, Render arrancó la API pero Neon todavía rechaza las credenciales.
+
+Para mantener activo el polling interno de presencia, usa un plan de Render que no suspenda el servicio. En el plan gratuito el servicio puede dormir; el bot debe llamar directamente a `/presence/check` si necesitas actividad periódica.
+
+## VPS
+
+```bash
+# Build / instalación
+python -m pip install -r artifacts/api-server/requirements.txt
+
+# Start
+cd artifacts/api-server && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
 ## Autenticación y seguridad
 
