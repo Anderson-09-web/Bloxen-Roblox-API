@@ -26,11 +26,64 @@ Para un arranque local sin PostgreSQL, si `DATABASE_URL` queda vacío se usa SQL
 
 ## Replit
 
-1. Crea o conecta una base PostgreSQL.
-2. Para una base Neon externa en Replit, define `BLOXEN_DATABASE_URL` como secreto privado. Tiene prioridad sobre la variable reservada `DATABASE_URL`.
-3. Define `API_KEY` como secreto privado; nunca escribas ninguna de las dos credenciales en el código ni las registres.
-4. Copia las demás variables de `.env.example` según necesites.
-5. El workflow del proyecto arranca `uvicorn` con el puerto que Replit proporciona.
+### 1. Configura Secrets
+
+En el panel **Secrets** del proyecto añade:
+
+| Nombre | Tipo | Uso |
+|---|---|---|
+| `API_KEY` | Secret | Bearer token que usará Bloxen |
+| `BLOXEN_DATABASE_URL` | Secret | Connection string de PostgreSQL Neon |
+
+`BLOXEN_DATABASE_URL` tiene prioridad sobre la variable automática `DATABASE_URL` de Replit. No guardes estos valores en `.env`, GitHub, el README ni el código.
+
+La URL de Neon debe ser una connection string nueva después de rotar la contraseña del rol si la anterior fue compartida en el chat. La aplicación acepta URLs con `sslmode=require` y `channel_binding=require`.
+
+### 2. Configura variables normales
+
+En **Environment variables** puedes usar:
+
+```env
+PRESENCE_INTERVAL=60
+CACHE_TTL=30
+CORS_ORIGINS=*
+ENVIRONMENT=production
+ROBLOX_TIMEOUT=8
+ROBLOX_RETRIES=2
+VERIFICATION_TTL=600
+VERIFICATION_MAX_ATTEMPTS=5
+RATE_LIMIT_MAX_REQUESTS=120
+RATE_LIMIT_WINDOW_SECONDS=60
+```
+
+### 3. Prueba antes de publicar
+
+El workflow de Replit ya está configurado para ejecutar:
+
+```bash
+python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}
+```
+
+Comprueba:
+
+```bash
+curl https://TU-DOMINIO-DEV/health
+curl https://TU-DOMINIO-DEV/docs
+curl -H "Authorization: Bearer TU_API_KEY" \
+  https://TU-DOMINIO-DEV/api/v1/roblox/user/Builderman
+```
+
+`/health` debe devolver `"database": "ok"`. Si devuelve `"database": "unavailable"`, no publiques todavía: Neon sigue rechazando la credencial.
+
+### 4. Publica
+
+1. Abre la herramienta **Publishing**.
+2. Usa la configuración de producción del artifact.
+3. Para mantener activo el polling periódico, elige un despliegue que mantenga el proceso encendido, como **VM**. Si el bot de Discord llama directamente a `/presence/check` y no dependes del polling interno, Autoscale también es válido.
+4. Publica y espera a que el health check `/health` sea correcto.
+5. Usa la URL `https://...replit.app` publicada como base para Bloxen. No uses la URL `.replit.dev` en el bot.
+
+El arranque de producción ya está configurado con Uvicorn, el puerto `8080` y el health check `/health`.
 
 ## Render y VPS
 
