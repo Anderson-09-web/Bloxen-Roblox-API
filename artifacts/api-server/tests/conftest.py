@@ -49,7 +49,9 @@ def roblox_mock(request: httpx.Request) -> httpx.Response:
 
 
 @pytest_asyncio.fixture
-async def api_client() -> AsyncIterator[httpx.AsyncClient]:
+async def api_client(monkeypatch) -> AsyncIterator[httpx.AsyncClient]:
+    monkeypatch.delenv("API_KEY", raising=False)
+    monkeypatch.delenv("BLOXEN_DATABASE_URL", raising=False)
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     await init_db(engine)
     settings = Settings(

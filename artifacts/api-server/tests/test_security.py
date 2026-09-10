@@ -9,7 +9,9 @@ from tests.conftest import roblox_mock
 
 
 @pytest.mark.asyncio
-async def test_rate_limiting_returns_429() -> None:
+async def test_rate_limiting_returns_429(monkeypatch) -> None:
+    monkeypatch.delenv("API_KEY", raising=False)
+    monkeypatch.delenv("BLOXEN_DATABASE_URL", raising=False)
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     await init_db(engine)
     settings = Settings(
