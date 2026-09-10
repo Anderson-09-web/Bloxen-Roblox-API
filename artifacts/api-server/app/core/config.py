@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,7 +17,10 @@ class Settings(BaseSettings):
     )
 
     api_key: str = Field(default="", validation_alias="API_KEY")
-    database_url: str = Field(default="", validation_alias="DATABASE_URL")
+    database_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("BLOXEN_DATABASE_URL", "DATABASE_URL"),
+    )
     presence_interval: int = Field(default=60, ge=15, validation_alias="PRESENCE_INTERVAL")
     cache_ttl: int = Field(default=30, ge=0, validation_alias="CACHE_TTL")
     cors_origins: str = Field(default="*", validation_alias="CORS_ORIGINS")

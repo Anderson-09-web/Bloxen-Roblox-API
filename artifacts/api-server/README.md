@@ -26,10 +26,11 @@ Para un arranque local sin PostgreSQL, si `DATABASE_URL` queda vacío se usa SQL
 
 ## Replit
 
-1. Crea una base PostgreSQL en el proyecto.
-2. Define `API_KEY` y `DATABASE_URL` como variables privadas del entorno; nunca las escribas en el código ni las registres.
-3. Copia las demás variables de `.env.example` según necesites.
-4. El workflow del proyecto arranca `uvicorn` con el puerto que Replit proporciona.
+1. Crea o conecta una base PostgreSQL.
+2. Para una base Neon externa en Replit, define `BLOXEN_DATABASE_URL` como secreto privado. Tiene prioridad sobre la variable reservada `DATABASE_URL`.
+3. Define `API_KEY` como secreto privado; nunca escribas ninguna de las dos credenciales en el código ni las registres.
+4. Copia las demás variables de `.env.example` según necesites.
+5. El workflow del proyecto arranca `uvicorn` con el puerto que Replit proporciona.
 
 ## Render y VPS
 
@@ -49,7 +50,7 @@ Variables mínimas:
 
 ```env
 API_KEY=una-clave-larga-y-aleatoria
-DATABASE_URL=postgresql://usuario:password@host:5432/bloxen
+BLOXEN_DATABASE_URL=postgresql://usuario:password@host.neon.tech/bloxen?sslmode=require
 PRESENCE_INTERVAL=60
 CACHE_TTL=30
 CORS_ORIGINS=*
