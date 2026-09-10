@@ -1,45 +1,49 @@
-# [Project name]
+# Bloxen Roblox API
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+API REST asíncrona para que el bot de Discord Bloxen verifique cuentas Roblox y consulte su presencia sin modificar Discord.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `cd artifacts/api-server && python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}` — ejecutar la API
+- `cd artifacts/api-server && python -m pytest -q` — ejecutar tests
+- El workflow `artifacts/api-server: API Server` arranca la API con Uvicorn.
+- Variables requeridas en producción: `API_KEY` y `DATABASE_URL`.
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Python 3.12+, FastAPI, Uvicorn, httpx async
+- PostgreSQL + SQLAlchemy async + asyncpg
+- Validación: Pydantic
+- API pública oficial de Roblox
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/api-server/app/main.py` — aplicación FastAPI, middleware y ciclo de vida
+- `artifacts/api-server/app/api/routes/` — endpoints
+- `artifacts/api-server/app/services/` — Roblox, verificación y presencia
+- `artifacts/api-server/app/database/models.py` — tablas e índices SQLAlchemy
+- `artifacts/api-server/README.md` — instalación, variables y contratos para el bot
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- La API nunca cambia nicknames ni llama a Discord; devuelve `action` para que `discord.py` actúe en el guild seleccionado.
+- La verificación fija el `roblox_id` al generar el código y luego comprueba la descripción por ID, no solo por username.
+- PostgreSQL es la base de producción; SQLite async solo se usa como fallback local cuando no hay `DATABASE_URL`.
+- El rate limiter es por proceso; en varias réplicas se debe complementar con un límite distribuido.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Permite lookup público de Roblox, códigos de verificación de un solo uso, vínculo Discord ↔ Roblox, presencia con detección de cambios de juego y configuración de roles de verificación por guild.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- La API debe ser Python 3.12+ y completamente asíncrona; no se usa Node.js en el servidor Bloxen.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Configurar `API_KEY` y `DATABASE_URL` antes de usar rutas `/api/v1/*`.
+- Los cambios de presencia no se aplican en Discord desde la API; el bot debe interpretar `update_nickname` y `reset_nickname`.
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- La documentación operativa está en `artifacts/api-server/README.md`.
