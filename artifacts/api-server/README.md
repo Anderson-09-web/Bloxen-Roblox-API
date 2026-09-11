@@ -98,7 +98,7 @@ Configuración recomendada:
 | Runtime | `Python 3` |
 | Root Directory | `artifacts/api-server` |
 | Build Command | `python -m pip install -r requirements.txt` |
-| Start Command | `python -m app.main` |
+| Start Command | `python -u -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level debug` |
 | Health Check Path | `/health` |
 
 Si dejas vacío **Root Directory**, usa estos comandos desde la raíz del repositorio:
@@ -108,10 +108,10 @@ Si dejas vacío **Root Directory**, usa estos comandos desde la raíz del reposi
 python -m pip install -r artifacts/api-server/requirements.txt
 
 # Start Command
-cd artifacts/api-server && python -m app.main
+cd artifacts/api-server && python -u -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level debug
 ```
 
-`app.main` lee `PORT` directamente del entorno y arranca Uvicorn escuchando en `0.0.0.0`. No fijes `PORT` manualmente: Render lo proporciona automáticamente.
+Render proporciona `$PORT` automáticamente. El proceso escucha en `0.0.0.0` y `-u` hace que cualquier traceback aparezca inmediatamente en los logs.
 
 ### Variables de entorno
 
