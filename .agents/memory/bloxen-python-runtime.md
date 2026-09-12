@@ -12,3 +12,9 @@ Replit PostgreSQL URLs may contain libpq parameters such as `sslmode` and `chann
 **Why:** Passing `sslmode` directly caused the application to fail during startup before any route was available.
 
 **How to apply:** Keep PostgreSQL as the production database, preserve a clear degraded health response when the configured database is unavailable, and never log the URL or credentials.
+
+Render's current Python 3.14 default is incompatible with the SQLAlchemy declarative union annotations used by this API; keep Render on Python 3.13 until that upstream typing behavior is resolved.
+
+**Why:** Python 3.14 caused SQLAlchemy model imports to fail before Uvicorn could start, while the same code passes on Python 3.13.
+
+**How to apply:** Pin the service with `.python-version` and/or `PYTHON_VERSION=3.13.11`, then use Render's normal Uvicorn start command.
