@@ -64,6 +64,7 @@ async def api_client(monkeypatch) -> AsyncIterator[httpx.AsyncClient]:
     client = httpx.AsyncClient(transport=httpx.MockTransport(roblox_mock))
     app = create_app(settings=settings, engine=engine, http_client=client)
     app.state.session_factory = create_session_factory(engine)
+    app.state.db_available = True
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as api:
         setattr(api, "test_app", app)
         yield api

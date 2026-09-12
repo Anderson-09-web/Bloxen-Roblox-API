@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator
 
-from fastapi import Request
+from fastapi import HTTPException, Request, status
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
@@ -32,6 +32,11 @@ async def init_db(engine: AsyncEngine) -> None:
 
 
 async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
+    if not request.app.state.db_available:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="La base de datos no está disponible. Configura una conexión PostgreSQL válida.",
+        )
     session_factory: async_sessionmaker[AsyncSession] = request.app.state.session_factory
     async with session_factory() as session:
         yield session

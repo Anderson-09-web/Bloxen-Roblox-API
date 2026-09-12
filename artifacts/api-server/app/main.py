@@ -10,10 +10,11 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.routes.presence import router as presence_router
 from app.api.routes.roblox import router as roblox_router
@@ -25,6 +26,7 @@ from app.database.database import create_engine, create_session_factory, init_db
 from app.database.models import PresenceConfig
 from app.services.presence_service import PresenceService
 from app.services.roblox_service import RobloxService
+from app.web import OPENAPI_DESCRIPTION, OPENAPI_TAGS, build_landing_page
 
 
 logging.basicConfig(
@@ -70,7 +72,8 @@ def create_app(
     app = FastAPI(
         title="Bloxen Roblox API",
         version="1.0.0",
-        description="API asíncrona para verificación Roblox y presencia para el bot de Discord Bloxen.",
+        description=OPENAPI_DESCRIPTION,
+        openapi_tags=OPENAPI_TAGS,
         lifespan=lifespan,
     )
     app.state.settings = runtime_settings
@@ -99,14 +102,46 @@ def create_app(
     async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
         return JSONResponse(status_code=422, content={"detail": "Datos de entrada inválidos.", "errors": exc.errors()})
 
+    @app.exception_handler(SQLAlchemyError)
+    async def database_exception_handler(_: Request, exc: SQLAlchemyError) -> JSONResponse:
+        logger.error("Database request unavailable: %s", type(exc).__name__)
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "La base de datos no está disponible. Revisa la conexión PostgreSQL."},
+        )
+
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         logger.exception("Unhandled error on %s %s: %s", request.method, request.url.path, type(exc).__name__)
         return JSONResponse(status_code=500, content={"detail": "Error interno del servidor."})
 
-    @app.get("/", tags=["System"])
-    async def root() -> dict[str, str]:
-        return {"name": "Bloxen Roblox API", "version": "1.0.0", "docs": "/docs"}
+    @app.get("/", response_class=HTMLResponse, tags=["System"], include_in_schema=False)
+    async def root() -> HTMLResponse:
+        return HTMLResponse(
+            build_landing_page(
+                version=app.version,
+                environment=runtime_settings.environment,
+                database_available=app.state.db_available,
+            )
+        )
+
+    @app.get("/guide", response_class=HTMLResponse, tags=["System"], include_in_schema=False)
+    async def guide() -> HTMLResponse:
+        return HTMLResponse(
+            build_landing_page(
+                version=app.version,
+                environment=runtime_settings.environment,
+                database_available=app.state.db_available,
+            )
+        )
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon() -> Response:
+        return Response(status_code=204)
+
+    @app.get("/api", tags=["System"])
+    async def api_metadata() -> dict[str, str]:
+        return {"name": "Bloxen Roblox API", "version": app.version, "docs": "/docs", "guide": "/"}
 
     @app.get("/health", tags=["System"])
     async def health(request: Request) -> dict[str, str]:

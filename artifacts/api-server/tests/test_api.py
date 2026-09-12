@@ -11,6 +11,28 @@ AUTH = {"Authorization": "Bearer test-key"}
 
 
 @pytest.mark.asyncio
+async def test_public_guide(api_client: httpx.AsyncClient) -> None:
+    response = await api_client.get("/")
+    assert response.status_code == 200
+    assert "Bloxen Roblox API" in response.text
+    assert "1.0.0" in response.text
+    assert "/docs" in response.text
+
+
+@pytest.mark.asyncio
+async def test_database_unavailable_is_explicit(api_client: httpx.AsyncClient) -> None:
+    api_client.test_app.state.db_available = False
+    response = await api_client.post(
+        "/api/v1/roblox/verify/create",
+        json={"discord_id": "9001", "username": "Anderson"},
+        headers=AUTH,
+    )
+    assert response.status_code == 503
+    assert "base de datos" in response.json()["detail"].lower()
+    api_client.test_app.state.db_available = True
+
+
+@pytest.mark.asyncio
 async def test_authentication(api_client: httpx.AsyncClient) -> None:
     response = await api_client.get("/api/v1/roblox/user/Anderson")
     assert response.status_code == 401
