@@ -127,7 +127,6 @@ BLOXEN_DATABASE_URL=postgresql://usuario:password@host.neon.tech/bloxen?sslmode=
 Variables normales:
 
 ```env
-PYTHON_VERSION=3.13.11
 ENVIRONMENT=production
 PRESENCE_INTERVAL=60
 CACHE_TTL=30

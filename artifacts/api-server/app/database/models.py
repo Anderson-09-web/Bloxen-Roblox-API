@@ -22,7 +22,8 @@ class RobloxAccount(Base):
     roblox_username: Mapped[str] = mapped_column(String(64), nullable=False)
     display_name: Mapped[str] = mapped_column(String(64), nullable=False)
     verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
-    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Keep nullable columns non-union-typed for SQLAlchemy on Python 3.14.
+    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
@@ -60,9 +61,9 @@ class PresenceConfig(Base):
     guild_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     roblox_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
-    last_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
-    last_game_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    last_game_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    last_status: Mapped[str] = mapped_column(String(16), nullable=True)
+    last_game_id: Mapped[str] = mapped_column(String(64), nullable=True)
+    last_game_name: Mapped[str] = mapped_column(String(128), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
@@ -72,7 +73,7 @@ class GuildVerificationConfig(Base):
     __tablename__ = "guild_verification_configs"
 
     guild_id: Mapped[str] = mapped_column(String(32), primary_key=True)
-    verified_role_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    verified_role_id: Mapped[str] = mapped_column(String(32), nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
