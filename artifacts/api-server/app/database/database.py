@@ -1,6 +1,7 @@
 from collections.abc import AsyncGenerator
 
 from fastapi import HTTPException, Request, status
+from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
@@ -29,6 +30,12 @@ def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSessi
 async def init_db(engine: AsyncEngine) -> None:
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+
+
+async def check_db(engine: AsyncEngine) -> None:
+    """Raise when the configured database cannot accept a simple query."""
+    async with engine.connect() as connection:
+        await connection.execute(text("SELECT 1"))
 
 
 async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:

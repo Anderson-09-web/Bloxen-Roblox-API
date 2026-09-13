@@ -5,9 +5,35 @@ import pytest
 from sqlalchemy import select
 
 from app.database.models import VerificationCode
+from app.core.config import Settings
 
 
 AUTH = {"Authorization": "Bearer test-key"}
+
+
+def test_database_url_accepts_render_friendly_alias(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("BLOXEN_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://old-user:old-pass@example.com/old")
+    monkeypatch.setenv("DB_URL", "postgresql://user:pass@example.com/app")
+    settings = Settings()
+    assert "user:pass@example.com/app" in settings.database_url_async
+
+
+@pytest.mark.asyncio
+async def test_health_recovers_after_startup_failure(api_client: httpx.AsyncClient) -> None:
+    api_client.test_app.state.db_available = False
+    response = await api_client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["database"] == "ok"
+    assert api_client.test_app.state.db_available is True
+
+
+@pytest.mark.asyncio
+async def test_liveness_does_not_depend_on_database(api_client: httpx.AsyncClient) -> None:
+    api_client.test_app.state.db_available = False
+    response = await api_client.get("/health/live")
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
 
 
 @pytest.mark.asyncio

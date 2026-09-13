@@ -35,7 +35,7 @@ En el panel **Secrets** del proyecto añade:
 | `API_KEY` | Secret | Bearer token que usará Bloxen |
 | `BLOXEN_DATABASE_URL` | Secret | Connection string de PostgreSQL Neon |
 
-`BLOXEN_DATABASE_URL` tiene prioridad sobre la variable automática `DATABASE_URL` de Replit. No guardes estos valores en `.env`, GitHub, el README ni el código.
+`BLOXEN_DATABASE_URL` tiene prioridad sobre `DB_URL`, y `DB_URL` sobre la variable automática `DATABASE_URL`; esto evita que una URL vieja del host anule la conexión nueva. No guardes estos valores en `.env`, GitHub, el README ni el código.
 
 La URL de Neon debe ser una connection string nueva después de rotar la contraseña del rol si la anterior fue compartida en el chat. La aplicación acepta URLs con `sslmode=require` y `channel_binding=require`.
 
@@ -160,7 +160,7 @@ curl -H "Authorization: Bearer TU_API_KEY" \
   https://TU-SERVICIO.onrender.com/api/v1/roblox/user/Builderman
 ```
 
-`/health` debe devolver `"status": "ok"` y `"database": "ok"`. Si devuelve `"database": "unavailable"`, Render arrancó la API pero Neon todavía rechaza las credenciales.
+`/health` debe devolver HTTP 200 con `"status": "ok"` y `"database": "ok"`. Si devuelve HTTP 503 con `"database": "unavailable"`, revisa los logs de Render: ahora muestran el tipo y mensaje del error de conexión sin imprimir la URL ni la contraseña. La API reintenta al arrancar y cada llamada posterior a `/health` puede recuperar automáticamente la conexión. `/health/live` comprueba solo que el proceso HTTP esté activo.
 
 Para mantener activo el polling interno de presencia, usa un plan de Render que no suspenda el servicio. En el plan gratuito el servicio puede dormir; el bot debe llamar directamente a `/presence/check` si necesitas actividad periódica.
 

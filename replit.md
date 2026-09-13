@@ -7,7 +7,7 @@ API REST asíncrona para que el bot de Discord Bloxen verifique cuentas Roblox y
 - `cd artifacts/api-server && python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}` — ejecutar la API
 - `cd artifacts/api-server && python -m pytest -q` — ejecutar tests
 - El workflow `artifacts/api-server: API Server` arranca la API con Uvicorn.
-- Secrets requeridos en producción: `API_KEY` y `BLOXEN_DATABASE_URL` (Neon); `DATABASE_URL` queda como fallback.
+- Secrets requeridos en producción: `API_KEY` y `BLOXEN_DATABASE_URL` (Neon); `DB_URL` y `DATABASE_URL` quedan como fallbacks, en ese orden.
 
 ## Stack
 
@@ -41,7 +41,8 @@ Permite lookup público de Roblox, códigos de verificación de un solo uso, ví
 
 ## Gotchas
 
-- Configurar `API_KEY` y `DATABASE_URL` antes de usar rutas `/api/v1/*`.
+- Configurar `API_KEY` y una URL PostgreSQL (`BLOXEN_DATABASE_URL`, `DATABASE_URL` o `DB_URL`) antes de usar rutas `/api/v1/*`.
+- `/health` valida la conexión real y devuelve HTTP 503 si la base no está disponible; `/health/live` solo valida que el proceso HTTP esté activo.
 - Los cambios de presencia no se aplican en Discord desde la API; el bot debe interpretar `update_nickname` y `reset_nickname`.
 
 ## Pointers

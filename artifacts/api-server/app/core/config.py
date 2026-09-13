@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     api_key: str = Field(default="", validation_alias="API_KEY")
     database_url: str = Field(
         default="",
-        validation_alias=AliasChoices("BLOXEN_DATABASE_URL", "DATABASE_URL"),
+        validation_alias=AliasChoices("BLOXEN_DATABASE_URL", "DB_URL", "DATABASE_URL"),
     )
     presence_interval: int = Field(default=60, ge=15, validation_alias="PRESENCE_INTERVAL")
     cache_ttl: int = Field(default=30, ge=0, validation_alias="CACHE_TTL")
@@ -49,6 +49,8 @@ class Settings(BaseSettings):
             return "postgresql+asyncpg://" + value.removeprefix("postgres://")
         if value.startswith("postgresql://"):
             return "postgresql+asyncpg://" + value.removeprefix("postgresql://")
+        if value.startswith("postgresql+") and "://" in value:
+            return "postgresql+asyncpg://" + value.split("://", 1)[1]
         return value
 
     @property

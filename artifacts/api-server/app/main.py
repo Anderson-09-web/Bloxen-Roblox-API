@@ -11,7 +11,6 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -22,7 +21,7 @@ from app.api.routes.verification import router as verification_router
 from app.core.cache import TTLCache
 from app.core.config import Settings, get_settings
 from app.core.rate_limit import RateLimitMiddleware
-from app.database.database import create_engine, create_session_factory, init_db
+from app.database.database import check_db, create_engine, create_session_factory, init_db
 from app.database.models import PresenceConfig
 from app.services.presence_service import PresenceService
 from app.services.roblox_service import RobloxService
@@ -34,6 +33,27 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 logger = logging.getLogger("bloxen.api")
+
+DATABASE_STARTUP_ATTEMPTS = 3
+DATABASE_RETRY_DELAY_SECONDS = 1
+
+
+async def _initialize_database(engine: AsyncEngine) -> bool:
+    for attempt in range(1, DATABASE_STARTUP_ATTEMPTS + 1):
+        try:
+            await init_db(engine)
+            return True
+        except Exception as exc:
+            logger.error(
+                "Database startup attempt %s/%s failed: %s: %s",
+                attempt,
+                DATABASE_STARTUP_ATTEMPTS,
+                type(exc).__name__,
+                exc,
+            )
+            if attempt < DATABASE_STARTUP_ATTEMPTS:
+                await asyncio.sleep(DATABASE_RETRY_DELAY_SECONDS)
+    return False
 
 
 def create_app(
@@ -47,11 +67,7 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.db_available = False
-        try:
-            await init_db(runtime_engine)
-            app.state.db_available = True
-        except Exception as exc:
-            logger.error("Database startup unavailable: %s", type(exc).__name__)
+        app.state.db_available = await _initialize_database(runtime_engine)
         if app.state.http_client is None:
             app.state.http_client = httpx.AsyncClient(
                 timeout=httpx.Timeout(runtime_settings.roblox_timeout),
@@ -145,20 +161,21 @@ def create_app(
 
     @app.get("/health", tags=["System"])
     async def health(request: Request) -> dict[str, str]:
-        if not request.app.state.db_available:
-            return JSONResponse(
-                status_code=200,
-                content={"status": "degraded", "database": "unavailable", "environment": runtime_settings.environment},
-            )
         try:
-            async with request.app.state.session_factory() as session:
-                await session.execute(text("SELECT 1"))
+            await check_db(request.app.state.engine)
+            request.app.state.db_available = True
             return {"status": "ok", "database": "ok", "environment": runtime_settings.environment}
-        except Exception:
+        except Exception as exc:
+            request.app.state.db_available = False
+            logger.warning("Database health check failed: %s: %s", type(exc).__name__, exc)
             return JSONResponse(
-                status_code=200,
+                status_code=503,
                 content={"status": "degraded", "database": "unavailable", "environment": runtime_settings.environment},
             )
+
+    @app.get("/health/live", tags=["System"])
+    async def liveness() -> dict[str, str]:
+        return {"status": "ok", "environment": runtime_settings.environment}
 
     app.include_router(roblox_router)
     app.include_router(presence_router)

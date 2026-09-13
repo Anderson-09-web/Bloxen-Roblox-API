@@ -10,7 +10,7 @@ name = "API Server"
 paths = ["/"]
 
 [services.development]
-run = "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"
+run = "uv run --project . python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"
 
 [services.production]
 
